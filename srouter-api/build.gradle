@@ -48,19 +48,15 @@ task sourceJar(type: Jar) {
     archiveClassifier = "sources"
 }
 
-def versionName = "1.0"
-
 afterEvaluate {
     publishing {
         publications {
             maven(MavenPublication) {
                 groupId = 'com.github.jeff-liu14'
-                artifactId = 'srouter-api'
-                version = versionName
+                artifactId = project.name
+                version = LIB_VERSION_NAME
                 artifact sourceJar
                 artifact(tasks.getByName("bundleReleaseAar"))
-//                print("$buildDir/outputs/aar/${project.name}-release.aar")
-//                artifact "$buildDir/outputs/aar/${project.name}-release.aar"
                 pom.withXml {
                     def dependenciesNode = asNode().appendNode('dependencies')
                     configurations.implementation.allDependencies.each {
