@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/SimplerRouter.iml" filepath="$PROJECT_DIR$/.idea/modules/SimplerRouter.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/SimplerRouter.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/SimplerRouter.app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/srouter-api/SimplerRouter.srouter-api.iml" filepath="$PROJECT_DIR$/.idea/modules/srouter-api/SimplerRouter.srouter-api.iml" />
+    </modules>
+  </component>
+</project>
