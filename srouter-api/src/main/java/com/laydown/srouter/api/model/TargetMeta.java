@@ -119,7 +119,7 @@ public class TargetMeta {
         return this;
     }
 
-    public TargetMeta WithBundle(Bundle bundle) {
+    public TargetMeta withBundle(Bundle bundle) {
         this.mBundle = bundle;
         return this;
     }
