@@ -123,28 +123,22 @@ public class _SimpleRouter {
     }
 
     protected Object navigate(TargetMeta targetMeta) {
-        Object obj = processOn(mContext, "degrade", targetMeta, -1);
-        return obj;
-//        return interceptorCall(mContext, targetMeta, -1);
+        return processOn(mContext, "degrade", targetMeta, -1);
     }
 
     protected Object navigate(Context context, TargetMeta targetMeta) {
         return processOn(context, "degrade", targetMeta, -1);
-//        return interceptorCall(context, targetMeta, -1);
     }
 
     protected void navigateForResult(TargetMeta targetMeta, int requestCode) {
         processOn(mContext, "degrade", targetMeta, requestCode);
-//        interceptorCall(mContext, targetMeta, requestCode);
     }
 
     protected void navigateForResult(Context context, TargetMeta targetMeta, int requestCode) {
         processOn(context, "degrade", targetMeta, requestCode);
-//        interceptorCall(context, targetMeta, requestCode);
     }
 
     protected void navigateForResultX(ComponentActivity activity, TargetMeta targetMeta, ActivityResultLauncher<Intent> resultLauncher) {
-//        interceptorCallX(activity, targetMeta, resultLauncher);
         processOnX(activity, "degrade", targetMeta, resultLauncher);
     }
 
@@ -224,12 +218,10 @@ public class _SimpleRouter {
         } else {
             switch (type) {
                 case "degrade":
-                    String tp = processDegrade(targetMeta);
-                    processOn(context, tp, targetMeta, requestCode);
+                    processOn(context, processDegrade(targetMeta), targetMeta, requestCode);
                     break;
                 case "interceptor":
-                    Object obj = interceptorCall(context, targetMeta, requestCode);
-                    return obj;
+                    return interceptorCall(context, targetMeta, requestCode);
                 default:
                     break;
             }
@@ -345,13 +337,6 @@ public class _SimpleRouter {
             targetMeta.greenChannel();
         }
         targetMeta.setClazzName(routerMeta.getClazzName());
-//        try {
-//            targetMeta.setaClass(Class.forName(routerMeta.getClazzName()));
-//        } catch (ClassNotFoundException exception) {
-//            if (degradeService != null) {
-//                degradeService.onLost(mContext, targetMeta);
-//            }
-//        }
         return targetMeta;
     }
 
