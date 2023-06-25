@@ -9,7 +9,7 @@ public class RouterMeta implements Serializable {
 
     private String clazzName;
 
-    private String pageUrl;
+    private String path;
 
     private Integer id;
 
@@ -23,12 +23,12 @@ public class RouterMeta implements Serializable {
         this.clazzName = clazzName;
     }
 
-    public String getPageUrl() {
-        return this.pageUrl;
+    public String getPath() {
+        return this.path;
     }
 
-    public void setPageUrl(String pageUrl) {
-        this.pageUrl = pageUrl;
+    public void setPath(String path) {
+        this.path = path;
     }
 
     public Integer getId() {

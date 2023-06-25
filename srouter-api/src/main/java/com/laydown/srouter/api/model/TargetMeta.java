@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 
+import androidx.activity.ComponentActivity;
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.Keep;
 
 import com.laydown.srouter.api.SimpleRouter;
@@ -11,11 +13,31 @@ import com.laydown.srouter.api.SimpleRouter;
 @Keep
 public class TargetMeta {
 
-    private String pageUrl;
+    private String path;
 
     private Integer id;
 
     private Class aClass;
+
+    private String clazzName;
+
+    public String getClazzName() {
+        return clazzName;
+    }
+
+    public void setClazzName(String clazzName) {
+        this.clazzName = clazzName;
+    }
+
+    private boolean greenChannel;
+
+    public boolean isGreenChannel() {
+        return greenChannel;
+    }
+
+    public void greenChannel() {
+        this.greenChannel = true;
+    }
 
     public String getmType() {
         return mType;
@@ -45,12 +67,12 @@ public class TargetMeta {
         this.mBundle = (null == bundle ? new Bundle() : bundle);
     }
 
-    public String getPageUrl() {
-        return pageUrl;
+    public String getPath() {
+        return path;
     }
 
-    public void setPageUrl(String pageUrl) {
-        this.pageUrl = pageUrl;
+    public void setPath(String pageUrl) {
+        this.path = pageUrl;
     }
 
     public Integer getId() {
@@ -85,12 +107,8 @@ public class TargetMeta {
         SimpleRouter.getInstance().navigateForResult(context, this, requestCode);
     }
 
-    public Intent navigateForResultX() {
-        return SimpleRouter.getInstance().navigateForResultX(this);
-    }
-
-    public Intent navigateForResultX(Context context) {
-        return SimpleRouter.getInstance().navigateForResultX(context, this);
+    public void navigateForResultX(ComponentActivity activity, ActivityResultLauncher<Intent> resultLauncher) {
+        SimpleRouter.getInstance().navigateForResultX(activity, this, resultLauncher);
     }
 
 

@@ -9,52 +9,73 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
 
+import androidx.activity.ComponentActivity;
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.core.app.ActivityCompat;
 
 import com.alibaba.fastjson.JSONObject;
+import com.laydown.srouter.api.interceptor.DegradeService;
+import com.laydown.srouter.api.interceptor.InterceptorCallBack;
 import com.laydown.srouter.api.model.RouterMeta;
 import com.laydown.srouter.api.model.TargetMeta;
 import com.laydown.srouter.api.provider.IProvider;
 import com.laydown.srouter.api.util.AesHelper;
 import com.laydown.srouter.api.util.FileUtil;
 import com.laydown.srouter.api.util.JsonTool;
+import com.laydown.srouter.api.util.SToastUtil;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Objects;
 
 import static com.laydown.srouter.api.util.Const.END_FIX;
 
 public class _SimpleRouter {
-    private Context mContext;
-
-    private HashMap<String, RouterMeta> routerMetaMap;
-
-    private static _SimpleRouter router;
-
+    private static Context mContext;
     private static Handler mHandler;
 
-    private String SIMPLE_ROUTER_KEY = "";
+    private volatile static HashMap<String, RouterMeta> routerMetaMap;
 
-    public static synchronized _SimpleRouter getInstance() {
+    private volatile static _SimpleRouter router;
+
+    private volatile static String SIMPLE_ROUTER_KEY = "";
+
+    private volatile static InterceptorCallBack interceptorCallBack;
+
+    private volatile static DegradeService degradeService;
+
+    protected static _SimpleRouter getInstance() {
         if (router == null) {
-            router = new _SimpleRouter();
+            synchronized (_SimpleRouter.class) {
+                if (router == null) {
+                    router = new _SimpleRouter();
+                }
+            }
         }
         return router;
     }
 
-    public boolean init(Application application) {
+    protected static synchronized boolean init(Application application) {
         mContext = application;
         routerMetaMap = new HashMap<>();
         mHandler = new Handler(Looper.getMainLooper());
         return true;
     }
 
-    public void setSimpleRouterKey(String simpleRouterKey) {
-        this.SIMPLE_ROUTER_KEY = simpleRouterKey;
+    protected static synchronized void setSimpleRouterKey(String simpleRouterKey) {
+        SIMPLE_ROUTER_KEY = simpleRouterKey;
     }
 
-    public void scanDestinationFromAsset(Boolean isOpenAes) {
+    protected static synchronized void setInterceptorCallBack(InterceptorCallBack callBack) {
+        interceptorCallBack = callBack;
+    }
+
+    protected static synchronized void setDegradeService(DegradeService service) {
+        degradeService = service;
+    }
+
+    protected static synchronized void scanDestinationFromAsset(Boolean isOpenAes) {
         String[] nameList = FileUtil.getAllAssetsList(mContext, "");
         ArrayList<String> stringArrayList = FileUtil.filterArray(nameList, END_FIX);
         if (stringArrayList.size() > 0) {
@@ -74,7 +95,7 @@ public class _SimpleRouter {
         }
     }
 
-    private void loadModuleFile(String jsonString) {
+    protected static synchronized void loadModuleFile(String jsonString) {
         HashMap<String, JSONObject> json2Map = JsonTool.json2Map(jsonString);
         Iterator<HashMap.Entry<String, JSONObject>> iterator = json2Map.entrySet().iterator();
         while (iterator.hasNext()) {
@@ -97,69 +118,170 @@ public class _SimpleRouter {
         }
     }
 
-    public HashMap<String, RouterMeta> getRouterMetaMap() {
+    protected static synchronized HashMap<String, RouterMeta> getRouterMetaMap() {
         return routerMetaMap;
     }
 
-    public Object navigate(TargetMeta targetMeta) {
-        return realNavigate(mContext, targetMeta, -1);
+    protected Object navigate(TargetMeta targetMeta) {
+        Object obj = processOn(mContext, "degrade", targetMeta, -1);
+        return obj;
+//        return interceptorCall(mContext, targetMeta, -1);
     }
 
-    public Object navigate(Context context, TargetMeta targetMeta) {
-        return realNavigate(context, targetMeta, -1);
+    protected Object navigate(Context context, TargetMeta targetMeta) {
+        return processOn(context, "degrade", targetMeta, -1);
+//        return interceptorCall(context, targetMeta, -1);
     }
 
-    public void navigateForResult(TargetMeta targetMeta, int requestCode) {
-        realNavigate(mContext, targetMeta, requestCode);
+    protected void navigateForResult(TargetMeta targetMeta, int requestCode) {
+        processOn(mContext, "degrade", targetMeta, requestCode);
+//        interceptorCall(mContext, targetMeta, requestCode);
     }
 
-    public void navigateForResult(Context context, TargetMeta targetMeta, int requestCode) {
-        realNavigate(context, targetMeta, requestCode);
+    protected void navigateForResult(Context context, TargetMeta targetMeta, int requestCode) {
+        processOn(context, "degrade", targetMeta, requestCode);
+//        interceptorCall(context, targetMeta, requestCode);
     }
 
-    public Intent navigateForResultX(TargetMeta targetMeta) {
-        return realNavigateX(mContext, targetMeta);
+    protected void navigateForResultX(ComponentActivity activity, TargetMeta targetMeta, ActivityResultLauncher<Intent> resultLauncher) {
+//        interceptorCallX(activity, targetMeta, resultLauncher);
+        processOnX(activity, "degrade", targetMeta, resultLauncher);
     }
 
-    public Intent navigateForResultX(Context context, TargetMeta targetMeta) {
-        return realNavigateX(context, targetMeta);
+    private void interceptorCallX(ComponentActivity activity, TargetMeta targetMeta, ActivityResultLauncher<Intent> resultLauncher) {
+        runInMainThread(() -> {
+            if (targetMeta.isGreenChannel()) {
+                _realNavigateX(activity, targetMeta, resultLauncher);
+            } else {
+                if (interceptorCallBack != null) {
+                    if (interceptorCallBack.onContinue(activity, targetMeta)) {
+                        _realNavigateX(activity, targetMeta, resultLauncher);
+                    }
+                } else {
+                    _realNavigateX(activity, targetMeta, resultLauncher);
+                }
+            }
+        });
     }
 
-    private Intent realNavigateX(Context context, TargetMeta targetMeta) {
+    private void _realNavigateX(ComponentActivity activity, TargetMeta targetMeta, ActivityResultLauncher<Intent> resultLauncher) {
+        Intent intent = new Intent(activity, targetMeta.getaClass());
+        intent.putExtras(targetMeta.getmBundle());
+        resultLauncher.launch(intent);
+    }
+
+    private String processDegrade(TargetMeta targetMeta) {
+        String clazzName = targetMeta.getClazzName();
+        try {
+            targetMeta.setaClass(Class.forName(clazzName));
+        } catch (ClassNotFoundException exception) {
+            if (degradeService != null) {
+                runInMainThread(() -> {
+                    degradeService.onLost(mContext, targetMeta);
+                });
+            } else {
+                runInMainThread(() -> {
+                    SToastUtil.showToast(mContext, "ops path: " + targetMeta.getPath() + " clazz: " + clazzName + " lost");
+                });
+            }
+            return "";
+        }
+        return "interceptor";
+    }
+
+    private String processOnX(ComponentActivity activity, String type, TargetMeta targetMeta, ActivityResultLauncher<Intent> resultLauncher) {
+        if (targetMeta.isGreenChannel()) {
+            try {
+                targetMeta.setaClass(Class.forName(targetMeta.getClazzName()));
+            } catch (ClassNotFoundException exception) {
+                throw new RuntimeException("Find fragment error, " + exception.getLocalizedMessage());
+            }
+            interceptorCallX(activity, targetMeta, resultLauncher);
+        } else {
+            switch (type) {
+                case "degrade":
+                    String tp = processDegrade(targetMeta);
+                    processOnX(activity, tp, targetMeta, resultLauncher);
+                    break;
+                case "interceptor":
+                    interceptorCallX(activity, targetMeta, resultLauncher);
+                    break;
+                default:
+                    break;
+            }
+        }
+        return "";
+    }
+
+    private Object processOn(Context context, String type, TargetMeta targetMeta, int requestCode) {
+        if (targetMeta.isGreenChannel()) {
+            try {
+                targetMeta.setaClass(Class.forName(targetMeta.getClazzName()));
+            } catch (ClassNotFoundException exception) {
+                throw new RuntimeException("Find fragment error, " + exception.getLocalizedMessage());
+            }
+            return interceptorCall(context, targetMeta, requestCode);
+        } else {
+            switch (type) {
+                case "degrade":
+                    String tp = processDegrade(targetMeta);
+                    processOn(context, tp, targetMeta, requestCode);
+                    break;
+                case "interceptor":
+                    Object obj = interceptorCall(context, targetMeta, requestCode);
+                    return obj;
+                default:
+                    break;
+            }
+        }
+        return "";
+    }
+
+    private Object interceptorCall(Context context, TargetMeta targetMeta, int requestCode) {
+        if (targetMeta.isGreenChannel()) {
+            return _realNavigate(context, targetMeta, requestCode);
+        } else {
+            if (interceptorCallBack != null) {
+                runInMainThread(() -> {
+                    if (interceptorCallBack.onContinue(context, targetMeta)) {
+                        _realNavigate(context, targetMeta, requestCode);
+                    }
+                });
+                return null;
+            } else {
+                return _realNavigate(context, targetMeta, requestCode);
+            }
+        }
+    }
+
+    private void startActivity(Context context, TargetMeta targetMeta, int requestCode) {
         Intent intent = new Intent(context, targetMeta.getaClass());
         if (context instanceof Application) {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         }
         intent.putExtras(targetMeta.getmBundle());
-        if (context instanceof Activity) {
-            return intent;
+        if (requestCode > 0) {
+            if (context instanceof Activity) {
+                ActivityCompat.startActivityForResult((Activity) context, intent, requestCode, targetMeta.getmBundle());
+            } else {
+                throw new RuntimeException("Must use [navigation(activity, ...)] to support [startActivityForResult]");
+            }
         } else {
-            throw new RuntimeException("Must use [navigation(activity, ...)] to support [startActivityForResult]");
+            ActivityCompat.startActivity(context, intent, targetMeta.getmBundle());
         }
     }
 
-    private Object realNavigate(Context context, TargetMeta targetMeta, int requestCode) {
+    private Object _realNavigate(Context context, TargetMeta targetMeta, int requestCode) {
         if (!targetMeta.getmType().isEmpty()) {
             switch (targetMeta.getmType()) {
                 case "activity":
-                    Intent intent = new Intent(context, targetMeta.getaClass());
-                    if (context instanceof Application) {
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    if (isMainThread()) {
+                        startActivity(context, targetMeta, requestCode);
+                    } else {
+                        runInMainThread(() -> {
+                            startActivity(context, targetMeta, requestCode);
+                        });
                     }
-                    intent.putExtras(targetMeta.getmBundle());
-
-                    runInMainThread(() -> {
-                        if (requestCode > 0) {
-                            if (context instanceof Activity) {
-                                ActivityCompat.startActivityForResult((Activity) context, intent, requestCode, targetMeta.getmBundle());
-                            } else {
-                                throw new RuntimeException("Must use [navigation(activity, ...)] to support [startActivityForResult]");
-                            }
-                        } else {
-                            ActivityCompat.startActivity(context, intent, targetMeta.getmBundle());
-                        }
-
-                    });
                     break;
                 case "fragment":
                     Class<?> fragmentMeta = targetMeta.getaClass();
@@ -196,12 +318,14 @@ public class _SimpleRouter {
     }
 
     public TargetMeta build(String pageUrl) {
-        HashMap<String, RouterMeta> routerMetaHashMap = _SimpleRouter.getInstance().getRouterMetaMap();
+        HashMap<String, RouterMeta> routerMetaHashMap = _SimpleRouter.getRouterMetaMap();
         if (routerMetaHashMap.containsKey(pageUrl)) {
-            RouterMeta routerMeta = routerMetaHashMap.get(pageUrl);
-            return parseRouterMeta(routerMeta);
+            return parseRouterMeta(Objects.requireNonNull(routerMetaHashMap.get(pageUrl)));
         }
-        throw new RuntimeException("not find pageUrl:" + pageUrl + "，please check again!!" + "\n already register：" + routerMetaHashMap.keySet().toString());
+        TargetMeta targetMeta = new TargetMeta();
+        targetMeta.setPath(pageUrl);
+        targetMeta.setClazzName("");
+        return targetMeta;
     }
 
     private void runInMainThread(Runnable runnable) {
@@ -215,15 +339,24 @@ public class _SimpleRouter {
     private TargetMeta parseRouterMeta(RouterMeta routerMeta) {
         TargetMeta targetMeta = new TargetMeta();
         targetMeta.setId(routerMeta.getId());
-        targetMeta.setPageUrl(routerMeta.getPageUrl());
+        targetMeta.setPath(routerMeta.getPath());
         targetMeta.setmType(routerMeta.getDestType());
-        try {
-            targetMeta.setaClass(Class.forName(routerMeta.getClazzName()));
-        } catch (ClassNotFoundException exception) {
-            exception.printStackTrace();
-            throw new RuntimeException("路由：" + routerMeta.getPageUrl() + "，对应的类：" + routerMeta.getClazzName() + "不存在，请检查后重试!!");
+        if (routerMeta.getDestType().equals("fragment") || routerMeta.getDestType().equals("provider")) {
+            targetMeta.greenChannel();
         }
+        targetMeta.setClazzName(routerMeta.getClazzName());
+//        try {
+//            targetMeta.setaClass(Class.forName(routerMeta.getClazzName()));
+//        } catch (ClassNotFoundException exception) {
+//            if (degradeService != null) {
+//                degradeService.onLost(mContext, targetMeta);
+//            }
+//        }
         return targetMeta;
+    }
+
+    private boolean isMainThread() {
+        return Looper.getMainLooper() == Looper.myLooper();
     }
 
 }
